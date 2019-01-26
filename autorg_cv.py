@@ -17,9 +17,9 @@ parser.add_argument('--resize', '-r', type=float, default=0.5,
 
 parser.add_argument('--device-framerate', type=int, default=30,
                     help='Desired framerate of the device')
-parser.add_argument('--device-width', type=int, default=1280,
+parser.add_argument('--device-width',     type=int, default=1280,
                     help='Desired width setting for the device')
-parser.add_argument('--device-height', type=int, default=720,
+parser.add_argument('--device-height',    type=int, default=720,
                     help='Desired width setting for the device')
 
 args = parser.parse_args()
@@ -56,14 +56,15 @@ nth_frame = args.nth
 
 
 cap = cv2.VideoCapture(args.device)
-if cap.get(cv2.CAP_PROP_MODE) != 0: # somehow it means that we're working on a device
+if cap.get(cv2.CAP_PROP_MODE) != 0:
+    # ↑ somehow it means that we're working on a device
     cap.set(cv2.CAP_PROP_FRAME_WIDTH,  args.device_width)
     cap.set(cv2.CAP_PROP_FRAME_HEIGHT, args.device_height)
     cap.set(cv2.CAP_PROP_FPS,          args.device_framerate)
 
 
 import collections
-views = None # collections.OrderedDict
+views = None  # collections.OrderedDict
 current_view = None
 
 floor_lower = np.array([0, 0, 0])
@@ -89,10 +90,11 @@ def set_ranges():
                              line_a_goal +  line_a_window,
                              line_b_goal +  line_b_window])
 
+
 def sample_teh_floor(image):
     floor_size = 30
     height, width, channels = image.shape
-    cropped = image[height - floor_size : height - 1, 0 : width]
+    cropped = image[height - floor_size:height - 1, 0:width]
 
     min_color_per_row = np.amin(cropped, axis=0)
     min_color = np.amin(min_color_per_row, axis=0)
@@ -111,6 +113,7 @@ def sample_teh_floor(image):
     set_ranges()
     to_settings()
 
+
 def tail():
     key = next(reversed(views))
     return views[key]
@@ -118,10 +121,12 @@ def tail():
 
 settings_window = 'Settings'
 settings_selfchange = 10
+
+
 def from_settings(val):
-    if settings_selfchange: # don't retrigger on changes
+    if settings_selfchange:  # don't retrigger on changes
         return
-    global floor_l_goal, floor_a_goal, floor_b_goal
+    global floor_l_goal,   floor_a_goal,   floor_b_goal
     global floor_l_window, floor_a_window, floor_b_window
     floor_l_goal   = cv2.getTrackbarPos('floor_l_goal',   settings_window)
     floor_a_goal   = cv2.getTrackbarPos('floor_a_goal',   settings_window)
@@ -130,6 +135,7 @@ def from_settings(val):
     floor_a_window = cv2.getTrackbarPos('floor_a_window', settings_window)
     floor_b_window = cv2.getTrackbarPos('floor_b_window', settings_window)
     set_ranges()
+
 
 def to_settings():
     global settings_selfchange
@@ -141,14 +147,15 @@ def to_settings():
     cv2.setTrackbarPos('floor_a_window', settings_window, floor_a_window)
     cv2.setTrackbarPos('floor_b_window', settings_window, floor_b_window)
 
+
 def init_settings():
     cv2.namedWindow(settings_window)
-    cv2.createTrackbar('floor_l_goal',   settings_window,    0,  255, from_settings)
-    cv2.createTrackbar('floor_a_goal',   settings_window,    0,  255, from_settings)
-    cv2.createTrackbar('floor_b_goal',   settings_window,    0,  255, from_settings)
-    cv2.createTrackbar('floor_l_window', settings_window,    0,  255, from_settings)
-    cv2.createTrackbar('floor_a_window', settings_window,    0,  255, from_settings)
-    cv2.createTrackbar('floor_b_window', settings_window,    0,  255, from_settings)
+    cv2.createTrackbar('floor_l_goal',   settings_window,   0, 255, from_settings)
+    cv2.createTrackbar('floor_a_goal',   settings_window,   0, 255, from_settings)
+    cv2.createTrackbar('floor_b_goal',   settings_window,   0, 255, from_settings)
+    cv2.createTrackbar('floor_l_window', settings_window,   0, 255, from_settings)
+    cv2.createTrackbar('floor_a_window', settings_window,   0, 255, from_settings)
+    cv2.createTrackbar('floor_b_window', settings_window,   0, 255, from_settings)
 
 
 
@@ -163,18 +170,18 @@ while(cap.isOpened()):
     ret, frame = cap.read()
     cnt += 1
     if cnt % nth_frame != 0:
-        continue # skip some frames
+        continue  # skip some frames
 
     views = collections.OrderedDict()
     views['original']  = frame
-    views['resized']   = cv2.resize(tail(), (0,0), fx=resize, fy=resize)
+    views['resized']   = cv2.resize(tail(), (0, 0), fx=resize, fy=resize)
     height, width, _ = tail().shape
-    final = tail().copy() # this is our final image
+    final = tail().copy()  # this is our final image
     views['lab']       = cv2.cvtColor(tail(), cv2.COLOR_BGR2LAB)
     views['bilateral'] = cv2.bilateralFilter(tail(), 7, 75, 75)
 
     views['floor_color']  = cv2.inRange(tail(), floor_lower, floor_upper)
-    kernel = np.ones((3,3), np.uint8)
+    kernel = np.ones((3, 3), np.uint8)
     views['floor_eroded']  = cv2.erode( tail(), kernel, iterations=erode_dilate_iterations)
     views['floor_dilated'] = cv2.dilate(tail(), kernel, iterations=erode_dilate_iterations)
 
@@ -202,21 +209,21 @@ while(cap.isOpened()):
     views['mask_interesting'] = cv2.bitwise_not(dil)
 
     views['mask_floor'] = np.zeros_like(tail())
-    #views['mask_floor_dilated'] = cv2.dilate(mask_floor, kernel, iterations=edge_dilate)
+    # views['mask_floor_dilated'] = cv2.dilate(mask_floor, kernel, iterations=edge_dilate)
     cv2.drawContours(tail(), hull, 0, 255, -1)
 
-    views['mask_floor_inside'] = tail().copy() # drawn onto later
+    views['mask_floor_inside'] = tail().copy()  # drawn onto later
 
     views['line_color'] = cv2.inRange(views['lab'], line_lower, line_upper)
     views['line_color_floor'] = cv2.bitwise_and(tail(), views['mask_floor'])
-    #line_kernel = np.array((0, 1, 0,
-    #                        1, 1, 1,
-    #                        0, 1, 0), dtype=np.uint8)
-    #views['line_color_eroded'] = cv2.erode(tail(), line_kernel, iterations=1)
+    # line_kernel = np.array((0, 1, 0,
+    #                         1, 1, 1,
+    #                         0, 1, 0), dtype=np.uint8)
+    # views['line_color_eroded'] = cv2.erode(tail(), line_kernel, iterations=1)
 
-    #red_lines = cv2.HoughLinesP(tail(), 3, np.pi / 60, 50, None, 60, 10)
-    #red_lines = cv2.HoughLinesP(tail(), rho = 1, theta = 1*np.pi/180,
-    #                            threshold = 1, minLineLength = 60, maxLineGap = 5)
+    # red_lines = cv2.HoughLinesP(tail(), 3, np.pi / 60, 50, None, 60, 10)
+    # red_lines = cv2.HoughLinesP(tail(), rho = 1, theta = 1*np.pi/180,
+    #                             threshold = 1, minLineLength = 60, maxLineGap = 5)
     lsd = cv2.createLineSegmentDetector(0)
     detected_lines = lsd.detect(tail())[0]
     red_lines = []
@@ -224,13 +231,13 @@ while(cap.isOpened()):
     cut_lines = []
     if detected_lines is not None:
         for i in range(0, len(detected_lines)):
-            l = detected_lines[i][0]
+            line = detected_lines[i][0]
             import math
-            length = math.sqrt(( l[0] - l[2] )**2 + ( l[1] - l[3] )**2)
+            length = math.sqrt((line[0] - line[2])**2 + (line[1] - line[3])**2)
             if length > red_line_threshold:
-                red_lines.append(l)
+                red_lines.append(line)
             else:
-                false_lines.append(l)
+                false_lines.append(line)
 
 
     for i in range(0, len(red_lines)):
@@ -240,22 +247,23 @@ while(cap.isOpened()):
         scale = max(width  / xdiff, height / ydiff)
         new1 = (int(foo[0] - xdiff * scale), int(foo[1] - ydiff * scale))
         new2 = (int(foo[2] + xdiff * scale), int(foo[3] + ydiff * scale))
-        retval, pt1, pt2 = cv2.clipLine((0,0,width,height), new1, new2)
+        retval, pt1, pt2 = cv2.clipLine((0, 0, width, height), new1, new2)
         cut_lines.append([pt1[0], pt1[1], pt2[0], pt2[1]])
 
 
     for i in range(0, len(cut_lines)):
         view = views['mask_floor_inside']
-        l = cut_lines[i]
+        line = cut_lines[i]
         hack = 10
-        far1_x = l[0] + (l[0] - floor_x) * hack
-        far1_y = l[1] + (l[1] - floor_y) * hack
-        far2_x = l[2] + (l[2] - floor_x) * hack
-        far2_y = l[3] + (l[3] - floor_y) * hack
-        cutout = np.array([ (l[0], l[1]),
-                            (l[2], l[3]),
-                            (far2_x, far2_y),
-                            (far1_x, far1_y),
+        far1_x = line[0] + (line[0] - floor_x) * hack
+        far1_y = line[1] + (line[1] - floor_y) * hack
+        far2_x = line[2] + (line[2] - floor_x) * hack
+        far2_y = line[3] + (line[3] - floor_y) * hack
+        cutout = np.array([
+            (line[0], line[1]),
+            (line[2], line[3]),
+            (far2_x, far2_y),
+            (far1_x, far1_y),
         ])
 
         cv2.fillConvexPoly(view, cutout, 0)
@@ -264,13 +272,13 @@ while(cap.isOpened()):
     views['mask_target'] = cv2.bitwise_and(tail(), views['mask_interesting'])
     m = cv2.moments(tail(), True)
 
-    #views['red_lines'] = lsd.drawSegments(views['resized'], red_lines)
+    # views['red_lines'] = lsd.drawSegments(views['resized'], red_lines)
 
     views['final'] = final
 
     # draw contours & hull
-    cv2.drawContours(tail(), contours, -1, color_contours, 1, 8, hierarchy) # draw contours
-    cv2.drawContours(tail(), hull, -1, color, 3, 8) # draw floor hull
+    cv2.drawContours(tail(), contours, -1, color_contours, 1, 8, hierarchy)  # draw contours
+    cv2.drawContours(tail(), hull, -1, color, 3, 8)  # draw floor hull
 
     # draw target
     target_x = None
@@ -291,14 +299,17 @@ while(cap.isOpened()):
 
     # draw lines
     for i in range(0, len(cut_lines)):
-        l = cut_lines[i]
-        cv2.line(tail(), (l[0], l[1]), (l[2], l[3]), (0,255,  0), 1, cv2.LINE_AA)
+        line = cut_lines[i]
+        cv2.line(tail(), (line[0], line[1]), (line[2], line[3]),
+                 (  0, 255,   0), 1, cv2.LINE_AA)
     for i in range(0, len(red_lines)):
-        l = red_lines[i]
-        cv2.line(tail(), (l[0], l[1]), (l[2], l[3]), (255,0,  0), 1, cv2.LINE_AA)
+        line = red_lines[i]
+        cv2.line(tail(), (line[0], line[1]), (line[2], line[3]),
+                 (255,   0,   0), 1, cv2.LINE_AA)
     for i in range(0, len(false_lines)):
-        l = false_lines[i]
-        cv2.line(tail(), (l[0], l[1]), (l[2], l[3]), (255,0,255), 1, cv2.LINE_AA)
+        line = false_lines[i]
+        cv2.line(tail(), (line[0], line[1]), (line[2], line[3]),
+                 (255,   0, 255), 1, cv2.LINE_AA)
 
     # send current error
     if m['m00'] != 0:
@@ -315,7 +326,7 @@ while(cap.isOpened()):
 
     name, data = list(views.items())[current_view]
     cv2.putText(data, str(current_view) + ' - ' + name,
-                (10,20), font, 1, (160, 160, 160), 1, cv2.FILLED)
+                (10, 20), font, 1, (160, 160, 160), 1, cv2.FILLED)
     cv2.imshow('view', data)
 
     key = cv2.waitKey(1) & 0xFF
