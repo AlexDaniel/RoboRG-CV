@@ -32,10 +32,13 @@ font = cv2.FONT_HERSHEY_PLAIN
 color_contours = (  0, 255,   0)
 color          = (  0, 255, 255)
 color_target   = (  0,   0, 255)
+color_bottom   = (180, 180, 180)
 
 edge_dilate = 1
 erode_dilate_iterations = 15
 red_line_threshold = 40
+
+zoom_target = 0.85
 
 floor_l_goal   = config['floor_l_goal']
 floor_a_goal   = config['floor_a_goal']
@@ -187,7 +190,7 @@ while(cap.isOpened()):
 
     # definitely not top
     views['floor_eroded_hack'] = tail().copy()
-    cv2.rectangle(tail(), (0, 0), (width, int(height / 3)), (0), -1)
+    cv2.rectangle(tail(), (0, 0), (width, int(height / 2.3)), (0), -1)
 
     floor_moments = cv2.moments(tail(), True)
     floor_x = None
@@ -199,7 +202,7 @@ while(cap.isOpened()):
         floor_x = int(width  / 2)
         floor_y = int(height / 2)
 
-    im2, contours, hierarchy = cv2.findContours(tail(), cv2.RETR_TREE, cv2.CHAIN_APPROX_NONE)
+    _, contours, hierarchy = cv2.findContours(tail(), cv2.RETR_LIST, cv2.CHAIN_APPROX_SIMPLE)
     hull = []
     if len(contours) > 0:
         cont = np.vstack(contours[i] for i in range(len(contours)))
@@ -270,7 +273,10 @@ while(cap.isOpened()):
 
     views['mask_floor_inside_shrinked'] = cv2.erode(views['mask_floor_inside'], kernel, iterations=10)
     views['mask_target'] = cv2.bitwise_and(tail(), views['mask_interesting'])
+
     m = cv2.moments(tail(), True)
+    _, target_contours, _ = cv2.findContours(tail(), cv2.RETR_LIST, cv2.CHAIN_APPROX_SIMPLE)
+
 
     # views['red_lines'] = lsd.drawSegments(views['resized'], red_lines)
 
@@ -279,17 +285,36 @@ while(cap.isOpened()):
     # draw contours & hull
     cv2.drawContours(tail(), contours, -1, color_contours, 1, 8, hierarchy)  # draw contours
     cv2.drawContours(tail(), hull, -1, color, 3, 8)  # draw floor hull
+    #cv2.drawContours(tail(), target_contours, -1, color_bottom, 3, 8)  # draw floor hull
 
     # draw target
     target_x = None
     target_y = None
+    bottom = None
     if m['m00'] != 0:
+        # pan
         target_x = int(m['m10'] / m['m00'])
         target_y = int(m['m01'] / m['m00'])
         cv2.circle(tail(), (target_x, target_y), 10, color_target, 1)
         cv2.line(tail(), (target_x - 13, target_y), (target_x + 13, target_y),
                  color_target, 1)
         cv2.line(tail(), (target_x, target_y - 13), (target_x, target_y + 13),
+                 color_target, 1)
+
+        # zoom
+        bottom = target_contours[0][0][0] # init to something
+        for contour in target_contours:
+            for point in contour:
+                p = point[0]
+                if p[1] > bottom[1]:
+                    bottom = p
+        cv2.line(tail(), (bottom[0] - 10, bottom[1]), (bottom[0] + 10, bottom[1]),
+                 color_bottom, 2)
+        cv2.line(tail(), (0, bottom[1]), (width, bottom[1]),
+                 color_bottom, 1)
+        cv2.line(tail(), (0, height - bottom[1]), (width, height - bottom[1]),
+                 color_bottom, 1)
+        cv2.line(tail(), (0, int(height * zoom_target)), (int(width / 50), int(height * zoom_target)),
                  color_target, 1)
 
     # draw floor center
@@ -316,6 +341,9 @@ while(cap.isOpened()):
         half_width = width / 2
         pan_error = (target_x - half_width) / half_width
         print('Z ' + str(round(pan_error, 4)))
+        zoom_error = bottom[1] / height - zoom_target
+        zoom_error *= -1
+        print('Y ' + str(round(zoom_error, 4)))
 
     import sys
     sys.stdout.flush()
