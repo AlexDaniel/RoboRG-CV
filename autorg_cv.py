@@ -344,10 +344,10 @@ while(cap.isOpened()):
     if m['m00'] != 0:
         half_width = width / 2
         pan_error = (target_x - half_width) / half_width
-        print('Z ' + str(round(pan_error, 4)))
+        print('output Z ' + str(round(pan_error, 4)))
         zoom_error = bottom[1] / height - zoom_target
         zoom_error *= -1
-        print('Y ' + str(round(zoom_error, 4)))
+        print('output Y ' + str(round(zoom_error, 4)))
 
     import sys
     sys.stdout.flush()
