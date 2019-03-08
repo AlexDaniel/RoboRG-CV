@@ -281,6 +281,20 @@ while(cap.isOpened()):
     m = cv2.moments(tail(), True)
     _, target_contours, _ = cv2.findContours(tail(), cv2.RETR_LIST, cv2.CHAIN_APPROX_SIMPLE)
 
+    target_left  = None
+    target_right = None
+    row = cv2.reduce(tail(), 0, cv2.REDUCE_MAX)
+    for i in range(width):
+        if not row[0][i]:
+            continue
+        target_right = i
+        if target_left is None:
+            target_left = i
+
+    if target_left is None:
+        target_left = 1
+    if target_right is None:
+        target_right = 25
 
     # views['red_lines'] = lsd.drawSegments(views['resized'], red_lines)
 
@@ -305,6 +319,9 @@ while(cap.isOpened()):
         cv2.line(tail(), (target_x, target_y - 13), (target_x, target_y + 13),
                  color_target, 1)
 
+        cv2.line(tail(), (target_x, target_y - 13), (target_x, target_y + 13),
+                 color_target, 1)
+
         # zoom
         bottom = target_contours[0][0][0] # init to something
         for contour in target_contours:
@@ -320,6 +337,19 @@ while(cap.isOpened()):
                  color_bottom, 1)
         cv2.line(tail(), (0, int(height * zoom_target)), (int(width / 50), int(height * zoom_target)),
                  color_target, 1)
+
+        # left-right target
+        cv2.line(tail(), (target_left,  bottom[1]), (target_left,  height - bottom[1]),
+                 color_bottom, 1)
+        cv2.line(tail(), (target_right, bottom[1]), (target_right, height - bottom[1]),
+                 color_bottom, 1)
+
+        target_mean = int((target_left + target_right) / 2)
+
+        cv2.line(tail(), (target_mean, target_y -10), (target_mean, target_y +10),
+                 color_target, 1)
+
+        target_x = target_mean # comment it out for center of mass
 
     # draw floor center
     if floor_x is not None:
