@@ -36,6 +36,7 @@ color_bottom   = (180, 180, 180)
 
 edge_dilate = 1
 erode_dilate_iterations = 15
+floor_shrink_erode = 6
 red_line_threshold = 40
 
 zoom_target = 0.85
@@ -274,7 +275,7 @@ while(cap.isOpened()):
 
         cv2.fillConvexPoly(view, cutout, 0)
 
-    views['mask_floor_inside_shrinked'] = cv2.erode(views['mask_floor_inside'], kernel, iterations=10)
+    views['mask_floor_inside_shrinked'] = cv2.erode(views['mask_floor_inside'], kernel, iterations=floor_shrink_erode)
     views['mask_target'] = cv2.bitwise_and(tail(), views['mask_interesting'])
 
     m = cv2.moments(tail(), True)
