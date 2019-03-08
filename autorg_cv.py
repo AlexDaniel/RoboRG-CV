@@ -244,14 +244,17 @@ while(cap.isOpened()):
 
 
     for i in range(0, len(red_lines)):
-        foo = red_lines[i]
-        xdiff = foo[2] - foo[0]
-        ydiff = foo[3] - foo[1]
-        scale = max(width  / xdiff, height / ydiff)
-        new1 = (int(foo[0] - xdiff * scale), int(foo[1] - ydiff * scale))
-        new2 = (int(foo[2] + xdiff * scale), int(foo[3] + ydiff * scale))
-        retval, pt1, pt2 = cv2.clipLine((0, 0, width, height), new1, new2)
-        cut_lines.append([pt1[0], pt1[1], pt2[0], pt2[1]])
+        try:
+            foo = red_lines[i]
+            xdiff = foo[2] - foo[0]
+            ydiff = foo[3] - foo[1]
+            scale = max(width  / xdiff, height / ydiff)
+            new1 = (int(foo[0] - xdiff * scale), int(foo[1] - ydiff * scale))
+            new2 = (int(foo[2] + xdiff * scale), int(foo[3] + ydiff * scale))
+            retval, pt1, pt2 = cv2.clipLine((0, 0, width, height), new1, new2)
+            cut_lines.append([pt1[0], pt1[1], pt2[0], pt2[1]])
+        except:
+            pass
 
 
     for i in range(0, len(cut_lines)):
