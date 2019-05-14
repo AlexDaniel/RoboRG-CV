@@ -7,6 +7,8 @@ parser = argparse.ArgumentParser(description='Opens a video stream and'
                                  + ' outputs pan/tilt/zoom errors to stdout.')
 parser.add_argument('device', type=str,
                     help='Path to process (path to a video file or /dev/videoX)')
+parser.add_argument('--loopback', type=argparse.FileType('wb'),
+                    help='Path to the loopback device (/dev/videoX)')
 parser.add_argument('--config', '-c', type=open, required=True,
                     help='Path to the json file with color goals')
 
@@ -162,22 +164,48 @@ def init_settings():
     cv2.createTrackbar('floor_b_window', settings_window,   0, 255, from_settings)
 
 
+def set_video_output(device, height, width, channels):
+    import v4l2
+    import fcntl
+    format                      = v4l2.v4l2_format()
+    format.type                 = v4l2.V4L2_BUF_TYPE_VIDEO_OUTPUT
+    format.fmt.pix.field        = v4l2.V4L2_FIELD_NONE
+    format.fmt.pix.pixelformat  = v4l2.V4L2_PIX_FMT_BGR24
+    format.fmt.pix.width        = width
+    format.fmt.pix.height       = height
+    format.fmt.pix.bytesperline = width * channels
+    format.fmt.pix.sizeimage    = width * height * channels
+
+    print ("set format result (0 is good):{}".format(fcntl.ioctl(device, v4l2.VIDIOC_S_FMT, format)))
+    return device
+
 
 set_ranges()
 init_settings()
 to_settings()
+
+loopback_device = None
 
 cnt = 0
 while(cap.isOpened()):
     if settings_selfchange > 0:
         settings_selfchange -= 1
     ret, frame = cap.read()
+
+    if loopback_device is None and args.loopback is not None:
+        loopback_device = set_video_output(args.loopback, *frame.shape)
+
+    if loopback_device is not None:
+        loopback_device.write(frame)
+
     cnt += 1
     if cnt % nth_frame != 0:
         continue  # skip some frames
 
     views = collections.OrderedDict()
-    views['original']  = frame
+    views['original']  = frame.copy()
+    height, width, _ = tail().shape
+
     views['resized']   = cv2.resize(tail(), (0, 0), fx=resize, fy=resize)
     height, width, _ = tail().shape
     final = tail().copy()  # this is our final image
@@ -374,13 +402,16 @@ while(cap.isOpened()):
     if m['m00'] != 0:
         half_width = width / 2
         pan_error = (target_x - half_width) / half_width
-        print('output Z ' + str(round(pan_error, 4)))
+        if loopback_device is None:
+            print('output Z ' + str(round(pan_error, 4)))
         zoom_error = bottom[1] / height - zoom_target
         zoom_error *= -1
-        print('output Y ' + str(round(zoom_error, 4)))
+        if loopback_device is None:
+            print('output Y ' + str(round(zoom_error, 4)))
 
     import sys
-    sys.stdout.flush()
+    if loopback_device is None:
+        sys.stdout.flush()
 
 
     if current_view is None:
@@ -390,6 +421,10 @@ while(cap.isOpened()):
     cv2.putText(data, str(current_view) + ' - ' + name,
                 (10, 20), font, 1, (160, 160, 160), 1, cv2.FILLED)
     cv2.imshow('view', data)
+
+    if loopback_device is not None:
+        sys.stdout.buffer.write(views['original'].tostring())
+        sys.stdout.flush()
 
     key = cv2.waitKey(1) & 0xFF
     if key == ord('s'):
@@ -403,6 +438,7 @@ while(cap.isOpened()):
     if key == ord('q'):
         break
 
-print('Z 0')
+if loopback_device is None:
+    print('Z 0')
 cap.release()
 cv2.destroyAllWindows()
