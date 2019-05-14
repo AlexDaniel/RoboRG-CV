@@ -1,0 +1,15 @@
+{
+    "floor_l_goal"   : 185,
+    "floor_a_goal"   : 129,
+    "floor_b_goal"   : 143,
+    "floor_l_window" :  50,
+    "floor_a_window" :   9,
+    "floor_b_window" :   9,
+
+    "line_l_goal"    : 100,
+    "line_a_goal"    : 160,
+    "line_b_goal"    : 160,
+    "line_l_window"  :  50,
+    "line_a_window"  :  15,
+    "line_b_window"  :  15
+}
