@@ -52,6 +52,7 @@ color          = (  0, 255, 255)
 color_target   = (  0,   0, 255)
 color_bottom   = (180, 180, 180)
 
+bilateral_diameter = 3
 edge_dilate = 1
 erode_dilate_iterations = 15
 floor_shrink_erode = 6
@@ -226,7 +227,7 @@ while(cap.isOpened()):
     height, width, _ = tail().shape
     final = tail().copy()  # this is our final image
     views['lab']       = cv2.cvtColor(tail(), cv2.COLOR_BGR2LAB)
-    views['bilateral'] = cv2.bilateralFilter(tail(), 7, 75, 75)
+    views['bilateral'] = cv2.bilateralFilter(tail(), bilateral_diameter, 25, 25)
 
     views['floor_color']  = cv2.inRange(tail(), floor_lower, floor_upper)
     kernel = np.ones((3, 3), np.uint8)
